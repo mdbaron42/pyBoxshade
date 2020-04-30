@@ -1,0 +1,55 @@
+Building & installing pyBoxshade
+
+These instructions are only for those wanting to build from source. For most users,
+it is best to download the pre-built binary for your system.
+
+
+Required:
+The pyBoxshade source files and the images folder (various icons used by the program)
+python 3.x (developed against 3.8)
+In your python installation, you need:
+PyQt5 (I used 5.14.1)
+numpy (I used 1.18.1)
+biopython (I used 1.76)
+These can be installed using pip,i.e
+>pip install numpy, biopython, pyqt5
+To package the application, I used pyinstaller
+
+pip install pyinstaller
+
+A) Running from the command line:
+To run the application from python, ensure you are in the folder with the source code or
+have that folder in your PYTHONPATH, then:
+
+python BS_app.py
+(you may have to type python3 BS_app.py on a Mac depending on how python was installed)
+
+B) Packaging as an application:
+In the folder containing the source and the images folder, type one of the following:
+on Mac OSX:
+pyi-makespec -n pyBoxshade -w BS_app.py
+
+on Windows:
+pyi-makespec -n pyBoxshade -w --onefile BS_app.py
+
+This creates a file pyBoxshade.spec. Edit this file as follows:
+replace the line
+datas=[],
+
+with
+datas=[('images', 'images')],
+
+and replace the line
+excludes=[],
+
+with
+excludes=['FixTk', 'tcl', 'tk', '_tkinter', 'tkinter', 'Tkinter'],
+
+Save this file and then type
+pyinstaller pyBoxshade.spec
+
+On Mac OSX this will create a stand-alone Mac application folder called pyBoxshade.app,
+which will launch as a normal application. 
+On Windows this creates a stand-alone pyBoxshade.exe, which behaves as a normal Windows 
+application except that it is a little slow to startup (it has to unpack the python 
+environment to a temporary folder and run from there).
