@@ -50,3 +50,6 @@ pyBoxshade has the ability to print a marker or ruler line over the sequence ali
 AAAAACCCCCAAAAACCCCCGGGGGTTTTTGGGGGTTTTTCCCCCTTTTTGGGGGAAAAA
 
 Numbers are right aligned with the residue in question.
+
+## Binaries
+Binaries are available for MacOS X (tested on 10.13.6), Windows (tested on Windows10) and linux (tested on Ubuntu). Note that, due to the way python applications are packaged, the Windows and linux binaries take a few seconds to start. Not all functions have been tested on all platforms, but the applications startup and open windows. Please provide feedback on any problems, especially in Windows and linux versions.
