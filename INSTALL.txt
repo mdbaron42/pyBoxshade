@@ -11,18 +11,25 @@ In your python installation, you need:
 PyQt5 (I used 5.14.1)
 numpy (I used 1.18.1)
 biopython (I used 1.76)
-These can be installed using pip,i.e
->pip install numpy, biopython, pyqt5
+These can be installed using pip (on MacOS X, your Python v 3 installation may require you to
+use "pip3" instead of "pip")
+
+pip install numpy, biopython, pyqt5
+
 To package the application, I used pyinstaller
 
 pip install pyinstaller
+
+If it is not already installed, "pip install pyinstaller" will also install setuptools, required by pyinstaller. 
+At the time of writing, there is a problem with pyinstaller and setuptools, and you need to 
+use a version of setuptools < 45.
 
 A) Running from the command line:
 To run the application from python, ensure you are in the folder with the source code or
 have that folder in your PYTHONPATH, then:
 
 python BS_app.py
-(you may have to type python3 BS_app.py on a Mac depending on how python was installed)
+(you may have to type python3 BS_app.py on a Mac depending on how python v 3.x was installed)
 
 B) Packaging as an application:
 In the folder containing the source and the images folder, type one of the following:
