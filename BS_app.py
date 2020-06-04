@@ -6,9 +6,10 @@ from PyQt5.QtGui import QIcon, QKeySequence, QFont, QColor, QPixmap
 from PyQt5.QtWidgets import (QAction, QApplication, QFileDialog, QMainWindow, QMessageBox, QTextEdit,
                              QStyleFactory, QWidget)
 import numpy as np
-
 from itertools import chain
+from platform import system
 
+import BS_config as BS
 from mydialog import prefsDialog
 from OutDevs import RTFdev, PSdev, ASCIIdev, Paintdev, ImageDisp
 
@@ -19,7 +20,7 @@ file_filter = ("All files (*);;FASTA files (*.fas*);;Clustal files (*.aln);;Phyl
 aaset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 lenaa = len(aaset)
 aasetlow = 'abcdefghijklmnopqrstuvwxyz'
-
+chars = aaset+aasetlow
 
 aa_dict = dict(zip(list(aaset), range(1,lenaa+1)))
 aalow_dict = dict(zip(list(aasetlow), range(1,len(aasetlow)+1)))
@@ -127,6 +128,26 @@ class MainWindow(QMainWindow):
         QApplication.setStyle(QStyleFactory.create("Fusion"))
         QApplication.setPalette(QApplication.style().standardPalette())
 
+        BS.ssfont = QFont("")
+        BS.ssfont.setStyleHint(QFont.SansSerif)
+        BS.ssfont.setStyleStrategy(QFont.PreferOutline)
+        BS.ssfont.setFamily("Arial")
+        BS.ssfont.setPointSize(32)
+        self.setAcceptDrops(True)
+        self.textEdit = QTextEdit()
+        self.textEdit.setPlaceholderText("Open a sequence file or drop one here")
+        self.textEdit.setFont(BS.ssfont)
+        self.textEdit.setReadOnly(True)
+        self.setCentralWidget(self.textEdit)
+
+        BS.monofont = QFont("")
+        BS.monofont.setStyleHint(QFont.Monospace)
+        BS.monofont.setStyleStrategy(QFont.PreferOutline)
+        if system() == "Darwin":
+            BS.monofont.setFamily("Courier")
+        else:
+            BS.monofont.setFamily("Courier New")
+
         self.curFile = ''
         self.al = []
         self.seqs = np.array([[' ', ' '], [' ', ' ']], dtype=np.unicode)
@@ -141,10 +162,6 @@ class MainWindow(QMainWindow):
         self.consensnum = 1 # the sequence that acts as consensus if scflag=True
         self.seqnames =[] # will become a list of sequence names
 
-        self.textEdit = QTextEdit()
-        self.textEdit.setFont(QFont("Courier", 12))
-        self.textEdit.setReadOnly(True)
-        self.setCentralWidget(self.textEdit)
         self.createActions()
         self.createMenus()
         self.createToolBars()
@@ -152,14 +169,36 @@ class MainWindow(QMainWindow):
         self.readSettings()
 
         self.setCurrentFile('')
-        self.lastdir = QDir.homePath()
+        BS.lastdir = QDir.homePath()
         self.viewList = []
         readsims()
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            self.textEdit.setStyleSheet("background-color : #b3e2ff ;")
+            event.accept()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasUrls():
+            urls = event.mimeData().urls()
+            fileName = urls[0].toLocalFile() # only take the first file dropped if more than one file
+            self.loadFile(fileName)
+            BS.lastdir = QFileInfo(fileName).absolutePath()
+            self.textEdit.setStyleSheet("background-color : #ffffff ;")
+            event.accept()
+        else:
+            event.ignore()
+
+
+    def dragLeaveEvent(self, event):
+            self.textEdit.setStyleSheet("background-color : #ffffff ;")
+            event.accept()
 
     def closeEvent(self, event):
         self.writeSettings()
         event.accept()
-
 
     def do_prefs(self):
         Preferences = prefsDialog(self.no_seqs, self.consensnum)
@@ -179,6 +218,9 @@ class MainWindow(QMainWindow):
         ab.setText("<b>pyBoxshade</b> allows the creation of nice pictures of "
                 "protein or DNA alignments with residues coloured and shaded "
                 "according to the level of sequence conservation")
+# The following code checks whether we are running from code or from a bundle
+# prepared by Pyinstaller, and sets the root directory accordingly to access
+# the images directory.
         if getattr(sys, 'frozen', False):
             root = getattr(sys, '_MEIPASS', '')
         else:
@@ -198,9 +240,6 @@ class MainWindow(QMainWindow):
         self.doPrefsAct = QAction(QIcon(root + '/images/prefs.png'), "Settings", self,
                 statusTip="Open dialog to allow control of program settings",
                 triggered=self.do_prefs)
-#        self.ProcessAct =QAction(QIcon(root + '/images/tick.png'), "Process Seqs", self,
-#                statusTip="Process sequences",
-#                triggered=self.process_seqs)
         self.RTFAct = QAction(QIcon(root + '/images/rtf.png'), "Make RTF", self,
                 statusTip="Make RTF file", triggered=self.RTF_out)
         self.PSAct = QAction(QIcon(root + '/images/ps-file.png'), "Make PS", self,
@@ -219,7 +258,6 @@ class MainWindow(QMainWindow):
         self.fileMenu.addSeparator();
         self.fileMenu.addAction(self.exitAct)
         self.actionsMenu = self.menuBar().addMenu("&Actions")
-#        self.actionsMenu.addAction(self.ProcessAct)
         self.actionsMenu.addAction(self.RTFAct)
         self.actionsMenu.addAction(self.PSAct)
         self.actionsMenu.addAction(self.AscAct)
@@ -238,7 +276,6 @@ class MainWindow(QMainWindow):
         p3 = QWidget()
         self.ToolBar.insertWidget(QAction(), p1)
         p1.setFixedWidth(20)
-#        self.ToolBar.addAction(self.ProcessAct)
         self.ToolBar.addAction(self.RTFAct)
         self.ToolBar.addAction(self.PSAct)
         self.ToolBar.addAction(self.AscAct)
@@ -276,20 +313,24 @@ class MainWindow(QMainWindow):
     def open(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self, "Open alignment file", self.lastdir, file_filter, options=options)
+        fileName, _ = QFileDialog.getOpenFileName(self, "Open alignment file", BS.lastdir, file_filter, options=options)
         if fileName:
             self.loadFile(fileName)
-            self.lastdir = QFileInfo(fileName).absolutePath()
+            BS.lastdir = QFileInfo(fileName).absolutePath()
 
     def loadFile(self, fileName):
         file = QFile(fileName)
-        if not file.open(QFile.ReadOnly):#open ReadOnly
+        if not file.open(QFile.ReadOnly):
             QMessageBox.warning(self, "Application",
                     "Cannot read file %s:\n%s." % (fileName, file.errorString()))
             return
 
         inf = QTextStream(file)
         QApplication.setOverrideCursor(Qt.WaitCursor)
+
+        BS.monofont.setPointSize(14)
+        BS.monofont.setWeight(QFont.Normal)
+        self.textEdit.setFont(BS.monofont)
         self.textEdit.setPlainText(inf.readAll())
         inf.seek(0)
         Line1=inf.readLine()
@@ -363,11 +404,6 @@ class MainWindow(QMainWindow):
 # there is not a single maxidcount, but they may all be the same residue
 # Have to check to see if all the residues with maxidcount are the same
                     else:
-#                        unique = True
-#                        for j in range(1,len(idindex)):
-#                            if x[idindex[0]] != x[idindex[j]]:
-#                                unique = False
-#                        if unique:
                         if np.all(x[idindex[0]]==x[idindex]):
                             self.cons[i] = x[idindex[0]]
 #if there is an equally high idcount for a different residue then there can't be a
@@ -375,14 +411,10 @@ class MainWindow(QMainWindow):
                 elif maxgrpcount >= thr:
                     if len(grpindex) == 1:
                         self.cons[i] = x[grpindex[0]]
-#                            unique = True
-#                            for j in range(1,len(grpindex)):
-#                                if not grp(self.seqs[grpindex[0], i], self.seqs[grpindex[j], i]):
-#                                    unique = False
                     elif np.all(uf(x[grpindex[0]], x[grpindex]).astype(bool)):
                         (vv,cc) = np.unique(x[grpindex], return_counts=True)
                         self.cons[i] = vv[np.argmax(cc)].lower()
-#if maxsimcount is not unique and the other residue is NOT in the same
+# if maxsimcount is not unique and the other residue is NOT in the same
 # similarity group then there is so consensus based on similarity. If
 # the two residues with the same similarity score are in the same
 # similarity group, flag that consensus position by making the
@@ -496,7 +528,7 @@ class MainWindow(QMainWindow):
         gr_out.seqnames.extend([name.ljust(sname_just) for name in self.seqnames])
         if self.consflag:
             gr_out.seqnames.append("consensus".ljust(sname_just))
-        if self.rulerflag: #code here to create ruler and put in first line of gr_out.seqs
+        if self.rulerflag: #code here to create ruler and put it in first line of gr_out.seqs
             gr_out.seqlens[0] = self.consenslen
             np.copyto(gr_out.seqs[0], np.array(['.']))
             gr_out.seqs[0,list(range(4,self.consenslen,10))] = ':'
@@ -530,7 +562,6 @@ class MainWindow(QMainWindow):
             nblocks = (self.consenslen//self.outlen)+1
             gr_out.LHprenums = [['' for i in range(nblocks)] for j in range(nseqs)]
             gr_out.RHprenums = [['' for i in range(nblocks)] for j in range(nseqs)]
-            chars = aaset+aasetlow
             numlen = len(str(np.amax(self.startnums)+self.consenslen))
             if self.rulerflag:
                 gr_out.LHprenums[0] = [' ' * numlen for x in gr_out.LHprenums[0]]
@@ -669,7 +700,7 @@ class MainWindow(QMainWindow):
 if __name__ == '__main__':
 
     import sys
-    getattr(sys, '_MEIPASS', '')
+#    getattr(sys, '_MEIPASS', '')
 
     set_defaults() # this returns immediately if the Preferences file already exists
     app = QApplication(sys.argv)

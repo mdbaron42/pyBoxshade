@@ -9,6 +9,9 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog,
         QDoubleSpinBox, QTableWidget, QTableWidgetItem)
 from PyQt5.QtGui import QFont
 
+import BS_config as BS
+from platform import system
+
 class prefsDialog(QDialog):
     def __init__(self, no_seqs, consensnum=0, parent=None):
         super(prefsDialog, self).__init__(parent)
@@ -326,6 +329,11 @@ class PSSettingsTab(QWidget):
         self.FSize = self.settings.value("PSFsize", type=int)
         self.LC = self.settings.value("PSLCs", type=bool)
         self.PSlandscapeflag = self.settings.value("PSlandscapeflag", type=bool)
+        if system() == "Darwin":
+            BS.monofont.setPointSize(32)
+        else:
+            BS.monofont.setPointSize(24)
+        BS.monofont.setWeight(QFont.Bold)
 
         PSLayout1 = QGridLayout()
         DF_button = QPushButton("Foreground")
@@ -334,7 +342,7 @@ class PSSettingsTab(QWidget):
         Diff.setFrameStyle(QFrame.NoFrame)
         Diff.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter)
         Diff.setAutoFillBackground(True)
-        Diff.setFont(QFont("Courier New", 32, QFont.Bold))
+        Diff.setFont(BS.monofont)
         Diff.setFixedSize(80, 32)
         Diff_UC = QRadioButton("Uppercase")
         self.Diff_LC = QRadioButton("Lowercase")
@@ -364,7 +372,7 @@ class PSSettingsTab(QWidget):
         ID.setFrameStyle(QFrame.NoFrame)
         ID.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter)
         ID.setAutoFillBackground(True)
-        ID.setFont(QFont("Courier New", 32, QFont.Bold))
+        ID.setFont(BS.monofont)
         ID.setFixedSize(80, 32)
         ID_UC = QRadioButton("Uppercase")
         self.ID_LC = QRadioButton("Lowercase")
@@ -394,7 +402,7 @@ class PSSettingsTab(QWidget):
         Sim.setFrameStyle(QFrame.NoFrame)
         Sim.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter)
         Sim.setAutoFillBackground(True)
-        Sim.setFont(QFont("Courier New", 32, QFont.Bold))
+        Sim.setFont(BS.monofont)
         Sim.setFixedSize(80, 32)
         Sim_UC = QRadioButton("Uppercase")
         self.Sim_LC = QRadioButton("Lowercase")
@@ -424,7 +432,7 @@ class PSSettingsTab(QWidget):
         Glob.setFrameStyle(QFrame.NoFrame)
         Glob.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter)
         Glob.setAutoFillBackground(True)
-        Glob.setFont(QFont("Courier New", 32, QFont.Bold))
+        Glob.setFont(BS.monofont)
         Glob.setFixedSize(80, 32)
         Glob_UC = QRadioButton("Uppercase")
         self.Glob_LC = QRadioButton("Lowercase")
@@ -652,7 +660,7 @@ class simsTab(QWidget):
         for i in range(len(naset)):
             b = self.DNAtable.item(i, 1).text().strip()
             if len(b) > 0 and b.isalpha():
-                DNAline.append(aaset[i] + ' ' + b)
+                DNAline.append(naset[i] + ' ' + b)
         DNAline = 'SIMS:' + ':'.join(DNAline) + ':END'
         if DNAline != self.settings.value("DNAsimsline"):
             self.proc_flag=True
