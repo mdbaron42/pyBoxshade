@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 
 import numpy as np
+import BS_config as BS
+from platform import system
 
 import datetime
 from PyQt5.QtCore import (QFile, Qt, QFileInfo, QTextStream, QDir, QSettings,QRectF)
-from PyQt5.QtGui import QColor,QPalette, QPixmap,  QFont, QPainter, QPen, QIcon
+from PyQt5.QtGui import QColor,QPalette, QPixmap, QFont, QPainter, QPen, QIcon
 from PyQt5.QtWidgets import (QAction, QFileDialog, QLabel, QMessageBox, QApplication, QStyleFactory,
                              QScrollArea, QSizePolicy, QVBoxLayout, QWidget, QToolBar)
 
 # class object that will handle output to a file
 # will subclass this for output to RTF/ASCII/PDF
 class Filedev():
+
     def __init__(self):
 # create the reference points for instance variables that will hold all the data to be processed by this instance
         self.seqs = np.array([[' ', ' '], [' ', ' ']], dtype=np.unicode)
@@ -27,7 +30,7 @@ class Filedev():
         self.file = None
         self.outstream = None
         self.parent = None
-        self.lastdir = QDir.homePath()
+
 
     def rgb(self, col):
         return col.red(), col.green(), col.blue()
@@ -36,10 +39,10 @@ class Filedev():
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         TDialog = QFileDialog()
-        fileName, _ = TDialog.getSaveFileName(self.parent,"Save file as:", self.lastdir, self.file_filter, options=options)
+        fileName, _ = TDialog.getSaveFileName(self.parent,"Save file as:", BS.lastdir, self.file_filter, options=options)
         if fileName:
             self.file = QFile(fileName)
-            self.lastdir = QFileInfo(fileName).absoluteDir()
+            BS.lastdir = QFileInfo(fileName).absolutePath()
             if not self.file.open(QFile.WriteOnly | QFile.Text):  # open to write
                 QMessageBox.warning(self, "Application",
                                     "Cannot open file %s:\n%s. for writing" % (fileName, self.file.errorString()))
@@ -69,7 +72,7 @@ class RTFdev(Filedev):
 
     def __init__(self, fname):
         super(RTFdev, self).__init__()
-        self.file_filter = ("All files (*);;RTF files (*.rtf)")
+        self.file_filter = ("RTF files (*.rtf);;All files (*)")
         self.Alignment = fname
         settings = QSettings("Boxshade", "Boxshade")
         self.bgds = settings.value("PSbgds")
@@ -138,7 +141,7 @@ class ImageDisp(QWidget):
         super(ImageDisp, self).__init__(parent)
         QApplication.setStyle(QStyleFactory.create("Fusion"))
         QApplication.setPalette(QApplication.style().standardPalette())
-        self.file_filter = ("All files (*);;PNG files (*.png)")
+        self.file_filter = ("PNG files (*.png);;All files (*)")
         self.setWindowFlag(Qt.Window, True)
         self.scaleFactor = 0.0
         self.imageLabel = QLabel()
@@ -158,7 +161,6 @@ class ImageDisp(QWidget):
 
         self.createActions()
         self.createToolBar()
-        self.lastdir = QDir.homePath()
 
     def createToolBar(self):
         self.tb.addAction(self.zoomInAct)
@@ -211,10 +213,10 @@ class ImageDisp(QWidget):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         TDialog = QFileDialog()
-        fileName, _ = TDialog.getSaveFileName(None,"Save file as:", self.lastdir, self.file_filter, options=options)
+        fileName, _ = TDialog.getSaveFileName(None,"Save file as:", BS.lastdir, self.file_filter, options=options)
         if fileName:
             self.file = QFile(fileName)
-            self.lastdir = QFileInfo(fileName).absolutePath()
+            BS.lastdir = QFileInfo(fileName).absolutePath()
             if not self.file.open(QFile.WriteOnly):  # open to write
                 QMessageBox.warning(self, "Application",
                                     "Cannot open file %s:\n%s. for writing" % (fileName, self.file.errorString()))
@@ -257,7 +259,10 @@ class Paintdev(Filedev):
         self.bgds.append(QColor(255, 255, 255))
         self.dev_miny = self.top_mar
         self.dev_minx = self.left_mar
-        self.dev_xsize = self.FSize * 0.8
+        if system() == "Darwin":
+            self.dev_xsize = self.FSize * 0.8
+        else:
+            self.dev_xsize = self.FSize
         self.dev_ysize = self.FSize
         self.lines_per_page = 10000
 
@@ -280,11 +285,12 @@ class Paintdev(Filedev):
         if self.canvas.isNull():
             return False
         self.canvas.fill(QColor(255,255,255))
-        self.myfont = QFont("Courier New",self.FSize)
-        self.myfont.setBold(True)
+
+        BS.monofont.setPointSize(self.FSize)
+        BS.monofont.setWeight(QFont.Bold)
         self.pen = QPen()
         self.paint = QPainter(self.canvas)
-        self.paint.setFont(self.myfont)
+        self.paint.setFont(BS.monofont)
         self.paint.setRenderHint(QPainter.Antialiasing, True)
         self.paint.setRenderHint(QPainter.TextAntialiasing, True)
 
@@ -323,7 +329,7 @@ class PSdev(Filedev):
     ctypes = ['% -- different residues\n', "% -- identical residues\n", "% -- similar residues\n", "% -- conserved residues\n", "% -- normal text\n"]
     def __init__(self, fname):
         super(PSdev, self).__init__()
-        self.file_filter = ("All files (*);;PS files (*.ps)")
+        self.file_filter = ("PS files (*.ps);;All files (*)")
         self.Alignment = fname
         settings = QSettings("Boxshade", "Boxshade")
         self.bgds = settings.value("PSbgds")
@@ -507,7 +513,7 @@ class ASCIIdev(Filedev):
 
     def __init__(self, fname):
         super(ASCIIdev, self).__init__()
-        self.file_filter = ("All files (*);;Text files (*.txt)")
+        self.file_filter = ("Text files (*.txt);;All files (*)")
         self.Alignment = fname
         settings = QSettings("Boxshade", "Boxshade")
         self.Achars = settings.value("ASCIIchars")
