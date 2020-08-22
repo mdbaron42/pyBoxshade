@@ -36,7 +36,7 @@ pyBoxshade offers the possibility to create an additional line holding a consens
 + the second symbol is used for positions where a residue or group is identical, similar or a mixture of identical and similar, in greater than the threshold number of sequences of the alignment.
 + the third symbol represents positions that are identical in all sequences of the alignment.
 
-For example, a parameter string " .*" (blank/point/asterisk) means: label all positions in the alignment with totally identical residues by an asterisk (*), all positions with greater than the threshold conserved residues by a point (.) and do not mark the other positions.
+For example, a parameter string " .\*" (blank/point/asterisk) means: label all positions in the alignment with totally identical residues by an asterisk (\*), all positions with greater than the threshold conserved residues by a point (.) and do not mark the other positions.
 Besides points, asterisks and other symbols, there are three letters that act as special characters when they appear in the string: 'B' 'L' and 'U'. A 'B' can be used to mean a blank, an 'L' means that a lowercase representation of the most abundant residue at that position is to be used instead of a fixed consensus symbol while a 'U' means an uppercase character representation of that residue. A possible application would be the string BLU where conserved residues are represented by lowercase characters and identical by uppercase characters.
 
 ### Sequence numbering
