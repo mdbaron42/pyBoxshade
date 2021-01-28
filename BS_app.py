@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 
+from itertools import chain
+from platform import system
+
+import numpy as np
 from Bio import AlignIO
 from PyQt5.QtCore import QFile, QFileInfo, QPoint, QSettings, QSize, Qt, QTextStream, QDir
 from PyQt5.QtGui import QIcon, QKeySequence, QFont, QColor, QPixmap
 from PyQt5.QtWidgets import (QAction, QApplication, QFileDialog, QMainWindow, QMessageBox, QTextEdit,
                              QStyleFactory, QWidget)
-import numpy as np
-from itertools import chain
-from platform import system
 
 import BS_config as BS
-from mydialog import prefsDialog
 from OutDevs import RTFdev, PSdev, ASCIIdev, Paintdev, ImageDisp
+from mydialog import prefsDialog
 
 # some global varibles and strings
 
@@ -255,7 +256,7 @@ class MainWindow(QMainWindow):
     def createMenus(self):
         self.fileMenu = self.menuBar().addMenu("&File")
         self.fileMenu.addAction(self.openAct)
-        self.fileMenu.addSeparator();
+        self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.exitAct)
         self.actionsMenu = self.menuBar().addMenu("&Actions")
         self.actionsMenu.addAction(self.RTFAct)
@@ -700,7 +701,9 @@ class MainWindow(QMainWindow):
 if __name__ == '__main__':
 
     import sys
+    import os
 #    getattr(sys, '_MEIPASS', '')
+    os.environ["QT_MAC_WANTS_LAYER"] = "1"
 
     set_defaults() # this returns immediately if the Preferences file already exists
     app = QApplication(sys.argv)
