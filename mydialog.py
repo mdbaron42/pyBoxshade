@@ -6,18 +6,37 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog,
         QGridLayout, QPushButton, QRadioButton, QColorDialog,
         QDialogButtonBox, QFrame, QGroupBox, QHeaderView, QLabel, QLineEdit,
         QTabWidget, QVBoxLayout, QHBoxLayout, QWidget, QSpinBox, QStyleFactory,
-        QDoubleSpinBox, QTableWidget, QTableWidgetItem)
+        QDoubleSpinBox, QTableWidget, QTableWidgetItem, QMessageBox)
 from PyQt5.QtGui import QFont
+import numpy as np
 
 import BS_config as BS
 from platform import system
 
+# a small function to make QSpinbox objects with the defined value/max/min/step
+# if I create them with the normal function, a value >99 is not accepted.
+def makeQSP(value=1, minimum=0, maximum=99, step=1):
+    QSP=QSpinBox()
+    QSP.setRange(minimum, maximum)
+    QSP.setValue(value)
+    QSP.setSingleStep(step)
+    return QSP
+
+# noinspection PyMethodMayBeStatic
 class prefsDialog(QDialog):
     def __init__(self, no_seqs, consensnum=0, parent=None):
         super(prefsDialog, self).__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.changeStyle("Fusion")
         self.setFixedWidth(580)
+
+        pDFont = self.font()
+        pDFont.setFamily("Arial")
+        if system() == "Darwin":
+            pDFont.setPointSize(13)
+        else:
+            pDFont.setPointSize(10)
+        self.setFont(pDFont)
 
         self.tabWidget = QTabWidget()
         self.GenTab = GeneralTab(no_seqs, consensnum)
@@ -50,14 +69,14 @@ class prefsDialog(QDialog):
         self.setWindowTitle("Boxshade Preferences")
 
     def exit(self):
-        self.GenTab.exit()
-        self.AsciiTab.exit()
-        self.PSTab.exit()
-        self.SimTab.exit()
-        self.GrpTab.exit()
-        if self.GenTab.proc_flag or self.SimTab.proc_flag or self.GrpTab.proc_flag:
-            self.proc_flag = True
-        self.accept()
+        if self.GenTab.exit():
+            self.AsciiTab.exit()
+            self.PSTab.exit()
+            self.SimTab.exit()
+            self.GrpTab.exit()
+            if self.GenTab.proc_flag or self.SimTab.proc_flag or self.GrpTab.proc_flag:
+                self.proc_flag = True
+            self.accept()
 
     def changeStyle(self, styleName):
         QApplication.setStyle(QStyleFactory.create(styleName))
@@ -98,10 +117,11 @@ class GeneralTab(QWidget):
 # consensus to single sequence and combobox to get that sequence
         self.scbox = QCheckBox("Consensus to a single sequence")
         self.consnum = QComboBox()
+        self.consnum.setMinimumContentsLength(2)
         if self.no_seqs > 1:
-            self.consnum.addItems(map(str, range(1, self.no_seqs + 1)))
+            self.consnum.addItems(['{:>2}'.format(i) for i in list(map(str, range(1, self.no_seqs + 1)))])
         else:
-            self.consnum.addItems(['1'])
+            self.consnum.addItems([' 1'])
         consnumlayout = QHBoxLayout()
         consnumlabel = QLabel("Make consensus to sequence:")
         consnumlayout.addWidget(consnumlabel)
@@ -118,7 +138,7 @@ class GeneralTab(QWidget):
         self.scbox.stateChanged.connect(consnumlabel.setEnabled)
         self.scbox.stateChanged.connect(self.consnum.setEnabled)
 
-# simple checkbox for whther sequence names will be printed
+# simple checkbox for whether sequence names will be printed
         self.seqnamebox = QCheckBox("Print sequence names")
         if self.snameflag:
             self.seqnamebox.setCheckState(Qt.Checked)
@@ -141,8 +161,10 @@ class GeneralTab(QWidget):
             self.defnumsbox.setCheckState(Qt.Checked)
         self.LHseqnumbox.stateChanged.connect(lambda ch: self.defnumsbox.setEnabled(ch) if not self.RHseqnumbox.isChecked() else None)
         self.RHseqnumbox.stateChanged.connect(lambda ch: self.defnumsbox.setEnabled(ch) if not self.LHseqnumbox.isChecked() else None)
-        self.LHseqnumbox.stateChanged.connect(lambda ch: self.startstable.setEnabled(ch) if not self.defnumsbox.isChecked() else None)
-        self.RHseqnumbox.stateChanged.connect(lambda ch: self.startstable.setEnabled(ch) if not self.defnumsbox.isChecked() else None)
+        self.LHseqnumbox.stateChanged.connect(lambda ch: self.startstable.setEnabled(ch) if (not self.defnumsbox.isChecked())\
+                                                                        and (not self.RHseqnumbox.isChecked()) else None)
+        self.RHseqnumbox.stateChanged.connect(lambda ch: self.startstable.setEnabled(ch) if (not self.defnumsbox.isChecked())\
+                                                                        and (not self.LHseqnumbox.isChecked()) else None)
 
 # checkbox for default sequence numbering and the table of startnumbers if required
         if self.RHsnumsflag or self.LHsnumsflag:
@@ -189,7 +211,7 @@ class GeneralTab(QWidget):
         self.thrbox.setMaximumSize(QSize(60,20))
         thrlayout.addWidget(thrlabel)
         thrlayout.addWidget(self.thrbox)
-        thrlayout.setContentsMargins(0,0,75,0)
+        thrlayout.setContentsMargins(0,0,55,0)
         mainlayout.addLayout(thrlayout,0,2)
 
         self.simflagbox = QCheckBox("Special shading for similar residues")
@@ -229,19 +251,19 @@ class GeneralTab(QWidget):
         mainlayout.addLayout(conslayout, 5, 2)
 
         lenlabel = QLabel("Sequence characters per line:")
-        self.lenbox = QSpinBox(value=self.outlen, singleStep=1, maximum=200)
-        self.lenbox.setMaximumSize(QSize(60, 20))
+        self.lenbox = makeQSP(value=self.outlen, step=1, maximum=250)
+        self.lenbox.setMaximumSize(QSize(80, 20))
         lenlayout.addWidget(lenlabel)
         lenlayout.addWidget(self.lenbox)
-        lenlayout.setContentsMargins(0, 0, 50, 0)
+        lenlayout.setContentsMargins(0, 0, 30, 0)
         mainlayout.addLayout(lenlayout, 6, 2)
 
         interlabel = QLabel("Number of lines between blocks:")
-        self.interbox = QSpinBox(value=self.interlines, minimum=1, singleStep=1)
+        self.interbox = makeQSP(value=self.interlines, minimum=1, step=1)
         self.interbox.setMaximumSize(QSize(40,20))
         interlayout.addWidget(interlabel)
         interlayout.addWidget(self.interbox)
-        interlayout.setContentsMargins(0,0,40,0)
+        interlayout.setContentsMargins(0,0,30,0)
         mainlayout.addLayout(interlayout,7,2)
         self.ProtRB = QRadioButton("Protein")
         DNARB = QRadioButton("DNA/RNA")
@@ -272,6 +294,27 @@ class GeneralTab(QWidget):
             self.startstable.setItem(i,1,b)
 
     def exit(self):
+        if (self.LHseqnumbox.isChecked() or self.RHseqnumbox.isChecked()) and not self.defnumsbox.isChecked():  # wants numbers, but not the default
+            if np.amax(self.startnums) == 1:
+                mb = QMessageBox(self)
+                mb.setTextFormat(Qt.RichText)
+                mb.setText(
+                    "<span style='text-align: center'><p style='font-size: 18pt'>Possible output options error</p></span>")
+                mb.setInformativeText(
+                    "<p style='font-size: 14pt'> You have selected non-default sequence numbering, but have not set the actual start numbers to be used for each sequence."\
+                    "<br><br>Continue with saving preferences?</p>")
+                mb.setIcon(QMessageBox.Information)
+                mb.setStandardButtons(QMessageBox.Yes|QMessageBox.No)
+                mb.setDefaultButton(QMessageBox.No)
+                ret_code = mb.exec()
+                if ret_code == QMessageBox.No:
+                    return False
+        if (self.scflag != self.scbox.isChecked() or self.pepseqsflag != self.ProtRB.isChecked()
+            or self.consflag != self.conslinebox.isChecked() or
+            (self.conslinebox.isChecked() and self.symbcons != self.consbox.text()) or
+                (self.scbox.isChecked() and self.consensnum != 1+self.consnum.currentIndex()) or
+                (self.thrfrac != self.thrbox.value())):
+            self.proc_flag =True
         self.settings.setValue("scflag", self.scbox.isChecked())
         self.settings.setValue("consflag", self.conslinebox.isChecked())
         self.settings.setValue("symbcons", self.consbox.text())
@@ -294,11 +337,7 @@ class GeneralTab(QWidget):
                 except:
                     a=1
                 self.startnums[i]=a
-        if (self.scflag != self.scbox.isChecked() or self.pepseqsflag != self.ProtRB.isChecked()
-            or self.consflag != self.conslinebox.isChecked() or
-            (self.conslinebox.isChecked() and self.symbcons != self.consbox.text()) or
-                (self.scbox.isChecked() and self.consensnum != 1+self.consnum.currentIndex())):
-            self.proc_flag =True
+
         if self.scflag:
             self.consensnum = 1+self.consnum.currentIndex()
         else:
@@ -310,6 +349,7 @@ class GeneralTab(QWidget):
 # to be printed and yet defnums=False (if defnums=True then all sequences start at 1)
 # I aim to get these values from the Dialog when it returns by connecting a function from the calling window to the accepted
 # signal from the dialog that retrieves those values as dialog_instance.GenTab.consensnum and dialog_instance.GenTab.startnums
+        return True
 
 class PSSettingsTab(QWidget):
     ss = "background-color : {0} ; color : {1} ;"
@@ -458,7 +498,7 @@ class PSSettingsTab(QWidget):
         PSLayout5 = QGridLayout()
         Fsizelayout = QHBoxLayout()
         Fsizelabel = QLabel("Font size:")
-        self.Fsizebox = QSpinBox(value=self.FSize, singleStep=1, maximum=48, minimum=6)
+        self.Fsizebox = makeQSP(value=self.FSize, step=1, maximum=48, minimum=6)
         self.Fsizebox.setMaximumSize(QSize(60, 20))
         Fsizelayout.addWidget(Fsizelabel)
         Fsizelayout.addWidget(self.Fsizebox)
@@ -696,7 +736,7 @@ class grpsTab(QWidget):
         self.grpstable.setHorizontalHeaderLabels(["Amino Acid Groups"])
         self.grpstable.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.grpstable.setFixedWidth(131)
-        self.grpstable.setFixedHeight((279))
+        self.grpstable.setFixedHeight(279)
         for i in range(len(self.grpsline)):
             self.grpstable.setRowHeight(i, 20)
             b = QTableWidgetItem(self.grpsline[i])
@@ -712,7 +752,7 @@ class grpsTab(QWidget):
         self.DNAgtable.setHorizontalHeaderLabels(["Nucleic Acid Groups"])
         self.DNAgtable.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.DNAgtable.setFixedWidth(135)
-        self.DNAgtable.setFixedHeight((279))
+        self.DNAgtable.setFixedHeight(279)
         for i in range(len(self.DNAgline)):
             self.DNAgtable.setRowHeight(i, 20)
             b = QTableWidgetItem(self.DNAgline[i])

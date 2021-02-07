@@ -1,42 +1,44 @@
-Building & installing pyBoxshade
+Running & packaging pyBoxshade
 
 These instructions are only for those wanting to build from source. For most users,
 it is best to download the pre-built binary for your system.
 
 
 Required:
-The pyBoxshade source files and the images folder (various icons used by the program)
+The pyBoxshade source files and the images folder (this contains various icons used by 
+the program)
+
 python 3.x (developed against 3.8)
 In your python installation, you need:
-PyQt5 (I used 5.14.1)
-numpy (I used 1.18.1)
-biopython (I used 1.76)
-These can be installed using pip (on MacOS X, your Python v 3 installation may require you to
-use "pip3" instead of "pip")
-
+PyQt5 (I used 5.14.2 for the Sierra version and 5.15.2 for everything else)
+numpy (I used 1.19.5)
+biopython (I used 1.78)
+These can be installed using pip,i.e
 pip install numpy, biopython, pyqt5
 
 To package the application, I used pyinstaller
 
 pip install pyinstaller
 
-If it is not already installed, "pip install pyinstaller" will also install setuptools, required by pyinstaller. 
-At the time of writing, there is a problem with pyinstaller and setuptools, and you need to 
-use a version of setuptools < 45.
+NB Because of a problem between pyinstaller and setuptools (at least in my experience 
+in the first half of 2020), you need to avoid setuptools >= 45.0.0, so after installing 
+pyinstaller, do the following:
+
+pip install --upgrade 'setuptools<45.0.0'
 
 A) Running from the command line:
 To run the application from python, ensure you are in the folder with the source code or
 have that folder in your PYTHONPATH, then:
 
 python BS_app.py
-(you may have to type python3 BS_app.py on a Mac depending on how python v 3.x was installed)
+(you may have to type python3 BS_app.py on a Mac depending on how python was installed)
 
 B) Packaging as an application:
 In the folder containing the source and the images folder, type one of the following:
 on Mac OSX:
 pyi-makespec -n pyBoxshade -w BS_app.py
 
-on Windows:
+on Windows/Linux:
 pyi-makespec -n pyBoxshade -w --onefile BS_app.py
 
 This creates a file pyBoxshade.spec. Edit this file as follows:
@@ -46,7 +48,7 @@ datas=[],
 with
 datas=[('images', 'images')],
 
-and replace the line
+and (for Mac OS and Windows only) replace the line
 excludes=[],
 
 with
@@ -57,6 +59,6 @@ pyinstaller pyBoxshade.spec
 
 On Mac OSX this will create a stand-alone Mac application folder called pyBoxshade.app,
 which will launch as a normal application. 
-On Windows this creates a stand-alone pyBoxshade.exe, which behaves as a normal Windows 
-application except that it is a little slow to startup (it has to unpack the python 
-environment to a temporary folder and run from there).
+On Windows and Linux  this creates a stand-alone application pyBoxshade (.exe on Windows),
+which behaves as a normal application except that it is a little slow to startup (it has 
+to unpack the python environment to a temporary folder and run from there).

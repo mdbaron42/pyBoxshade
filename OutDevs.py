@@ -12,11 +12,12 @@ from PyQt5.QtWidgets import (QAction, QFileDialog, QLabel, QMessageBox, QApplica
 
 # class object that will handle output to a file
 # will subclass this for output to RTF/ASCII/PDF
+# noinspection PyMethodMayBeStatic
 class Filedev():
 
     def __init__(self):
 # create the reference points for instance variables that will hold all the data to be processed by this instance
-        self.seqs = np.array([[' ', ' '], [' ', ' ']], dtype=np.unicode)
+        self.seqs = np.array([[' ', ' '], [' ', ' ']], dtype=str)
         self.cols = np.full(self.seqs.shape, 0, dtype=np.int32)
         self.seqnames =[]
         self.no_seqs = 0
@@ -36,6 +37,7 @@ class Filedev():
         return col.red(), col.green(), col.blue()
 
     def open_output_file(self):
+        QApplication.restoreOverrideCursor()
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         TDialog = QFileDialog()
@@ -44,8 +46,13 @@ class Filedev():
             self.file = QFile(fileName)
             BS.lastdir = QFileInfo(fileName).absolutePath()
             if not self.file.open(QFile.WriteOnly | QFile.Text):  # open to write
-                QMessageBox.warning(self, "Application",
-                                    "Cannot open file %s:\n%s. for writing" % (fileName, self.file.errorString()))
+                mb = QMessageBox()
+                mb.setTextFormat(Qt.RichText)
+                mb.setText("<p style='font-size: 18pt'>Open File error</p>"
+                           "<p style='font-size: 14pt; font-weight: normal'> Can't open file <i>{}</i> for writing.<br><br>"
+                           " File error was: \"{}\".</p>".format(fileName, self.file.errorString()))
+                mb.setIcon(QMessageBox.Warning)
+                mb.exec()
                 return False
             else:
                 self.outstream = QTextStream(self.file)
@@ -136,9 +143,12 @@ class RTFdev(Filedev):
         self.outstream << '\\b0}\n'
         super().exit()
 
+
+# noinspection PyMethodMayBeStatic
 class ImageDisp(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, mw, parent=None):
         super(ImageDisp, self).__init__(parent)
+        self.MW = mw
         QApplication.setStyle(QStyleFactory.create("Fusion"))
         QApplication.setPalette(QApplication.style().standardPalette())
         self.file_filter = ("PNG files (*.png);;All files (*)")
@@ -161,6 +171,10 @@ class ImageDisp(QWidget):
 
         self.createActions()
         self.createToolBar()
+
+    def closeEvent(self, event):
+        self.MW.viewList.remove(self)
+        event.accept()
 
     def createToolBar(self):
         self.tb.addAction(self.zoomInAct)
@@ -218,8 +232,14 @@ class ImageDisp(QWidget):
             self.file = QFile(fileName)
             BS.lastdir = QFileInfo(fileName).absolutePath()
             if not self.file.open(QFile.WriteOnly):  # open to write
-                QMessageBox.warning(self, "Application",
-                                    "Cannot open file %s:\n%s. for writing" % (fileName, self.file.errorString()))
+                mb = QMessageBox(self)
+                mb.setTextFormat(Qt.RichText)
+                mb.setText("<p style='font-size: 18pt'>Open File error</p>"
+                           "<p style='font-size: 14pt; font-weight: normal'> Can't open file <i>{}</i> for writing.<br><br>"
+                           " File error was: \"{}\".</p>".format(fileName, self.file.errorString()))
+                mb.setIcon(QMessageBox.Warning)
+                mb.exec()
+
                 return False
             else:
                 self.imageLabel.pixmap().save(self.file, fmt)
@@ -230,8 +250,9 @@ class ImageDisp(QWidget):
 
 class Paintdev(Filedev):
 
-    def __init__(self):
+    def __init__(self,mw):
         super(Paintdev, self).__init__()
+        self.MW=mw
         self.top_mar = 30.0
         self.left_mar = 30.0
         settings = QSettings("Boxshade", "Boxshade")
@@ -261,16 +282,17 @@ class Paintdev(Filedev):
         self.dev_minx = self.left_mar
         if system() == "Darwin":
             self.dev_xsize = self.FSize * 0.8
+            self.dev_ysize = self.FSize
         else:
-            self.dev_xsize = self.FSize
-        self.dev_ysize = self.FSize
+            self.dev_xsize = self.FSize * 0.9
+            self.dev_ysize = self.FSize * 1.2
         self.lines_per_page = 10000
 
     def graphics_init(self):
 # For this to work, I have to calculate how big a drawing I am going to make based on data passed in from calling routine
 # For this reason, I have moved gr_out.graphics_init() to the end of prep_out in the calling routine
 # as this "device" needs to know what it is drawing in order to initialise itself.
-
+#
         blocks = (self.seqs.shape[1]//self.outlen)+1
         canvas_height = int(self.top_mar+(self.dev_ysize*(blocks*(self.no_seqs+self.interlines)-self.interlines))+self.top_mar+0.5)
         nchars = self.outlen
@@ -339,6 +361,10 @@ class PSdev(Filedev):
         simflag = settings.value("simflag", type=bool)
         globalflag = settings.value("globalflag", type=bool)
         self.landscapeflag = settings.value("PSlandscapeflag", type=bool)
+        self.outlen = settings.value("outlen", type=int)
+        self.snameflag = settings.value("snameflag", type=bool)
+        self.LHsnumsflag = settings.value("LHsnumsflag", type=bool)
+        self.RHsnumsflag = settings.value("RHsnumsflag", type=bool)
 
         if not simflag:
             self.fgds[2] = self.fgds[0]
@@ -398,6 +424,29 @@ class PSdev(Filedev):
             self.save_sb = []
 
     def graphics_init(self):
+        nchars = self.outlen
+        if self.snameflag:
+            nchars += 1 + len(self.seqnames[0])
+        if self.LHsnumsflag:
+            nchars += 1 + len(self.LHprenums[0][0])
+        if self.RHsnumsflag:
+            nchars += 1 + len(self.RHprenums[0][0])
+        line_length = self.dev_xsize * nchars
+        if line_length > (self.dev_maxx-self.dev_minx):
+            mb = QMessageBox()
+            mb.setTextFormat(Qt.RichText)
+            mb.setText("<p style='font-size: 18pt'>Picture too wide for page!</p>"
+                       "<p style='font-size: 14pt; font-weight: normal'> Be aware, at your current settings, the PostScript image "
+                       "will be wider than the page and will be clipped.<br>"
+                       "The page width is {:n} pixels and your output would have a width of {:n} pixels.<br><br>"
+                       "Do you want to continue?</p>".format((self.dev_maxx-self.dev_minx), line_length))
+            mb.setIcon(QMessageBox.Information)
+            mb.setStandardButtons(QMessageBox.Yes|QMessageBox.No)
+            mb.setDefaultButton(QMessageBox.No)
+            ret = mb.exec()
+            if ret == QMessageBox.No:
+                return False
+
         if self.open_output_file():
             self.outstream << "%!PS-Adobe-2.0\n"
             self.outstream << "%%Creator: PyBoxshade\n"

@@ -122,6 +122,7 @@ def set_defaults():# To be called the first time the program is run, if there ar
     return
 
 
+# noinspection PyMethodMayBeStatic
 class MainWindow(QMainWindow):
 
     def __init__(self):
@@ -151,8 +152,8 @@ class MainWindow(QMainWindow):
 
         self.curFile = ''
         self.al = []
-        self.seqs = np.array([[' ', ' '], [' ', ' ']], dtype=np.unicode)
-        self.cons = np.array([' ',' ',' '], dtype=np.unicode)
+        self.seqs = np.array([[' ', ' '], [' ', ' ']], dtype=str)
+        self.cons = np.array([' ',' ',' '], dtype=str)
         self.conschar = np.copy(self.cons)
         self.cols = np.copy(self.seqs)
         self.seqlens = np.array([0,0,0])
@@ -199,6 +200,9 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         self.writeSettings()
+        vL=self.viewList.copy()
+        for id in vL: # close any remaining PNG windows
+            id.close()
         event.accept()
 
     def do_prefs(self):
@@ -214,11 +218,13 @@ class MainWindow(QMainWindow):
 
     def about(self):
         ab = QMessageBox(self)
-        super(QMessageBox, ab).setWindowTitle("About Boxshade")
+#        super(QMessageBox, ab).setWindowTitle("About this program")
         ab.setTextFormat(Qt.RichText)
-        ab.setText("<b>pyBoxshade</b> allows the creation of nice pictures of "
+        ab.setText("<p style='font-size: 18pt'>About pyBoxshade</p>"
+                   "<p style='font-size: 14pt; font-weight: normal'> <b>pyBoxshade</b> allows the creation of nice pictures of "
                 "protein or DNA alignments with residues coloured and shaded "
-                "according to the level of sequence conservation")
+                "according to the level of sequence conservation </p>")
+
 # The following code checks whether we are running from code or from a bundle
 # prepared by Pyinstaller, and sets the root directory accordingly to access
 # the images directory.
@@ -227,6 +233,7 @@ class MainWindow(QMainWindow):
         else:
             root = QFileInfo(__file__).absolutePath()
         ab.setIconPixmap(QPixmap(root + '/images/image2.png').scaled(80,80))
+
         ab.exec()
 
     def createActions(self):
@@ -308,8 +315,16 @@ class MainWindow(QMainWindow):
         try:
             self.al = AlignIO.read(open(fileName), seq_format)
         except ValueError:
-            QMessageBox.warning(self, "Format Error!\n",
-                                "Cannot extract sequences from current file.")
+            QApplication.restoreOverrideCursor()
+            mb=QMessageBox(self)
+            mb.setTextFormat(Qt.RichText)
+            mb.setText("<p style='font-size: 18pt'>Alignment format error</p>"
+            "<p style='font-size: 14pt; font-weight: normal'> Unable to extract sequences from that file - possibly a problem with the formatting of the alignment file.</p>")
+            mb.setIcon(QMessageBox.Warning)
+            mb.exec()
+            return False
+        return True
+
 
     def open(self):
         options = QFileDialog.Options()
@@ -322,44 +337,77 @@ class MainWindow(QMainWindow):
     def loadFile(self, fileName):
         file = QFile(fileName)
         if not file.open(QFile.ReadOnly):
-            QMessageBox.warning(self, "Application",
-                    "Cannot read file %s:\n%s." % (fileName, file.errorString()))
+            mb = QMessageBox(self)
+            mb.setTextFormat(Qt.RichText)
+            mb.setText("<p style='font-size: 18pt'>File opening error</p>"
+                "<p style='font-size: 14pt; font-weight: normal'> Unable to open file <i>{}</i>.<br><br>File error was: \"{}\".</p>".format(fileName, file.errorString()))
+            mb.setIcon(QMessageBox.Warning)
+            mb.exec()
             return
 
         inf = QTextStream(file)
         QApplication.setOverrideCursor(Qt.WaitCursor)
-
-        BS.monofont.setPointSize(14)
-        BS.monofont.setWeight(QFont.Normal)
-        self.textEdit.setFont(BS.monofont)
-        self.textEdit.setPlainText(inf.readAll())
-        inf.seek(0)
+        QApplication.processEvents()
         Line1=inf.readLine()
-        file.close()
         if Line1.startswith(">"):
-            self.read_seq(fileName, "fasta")
+            readOK=self.read_seq(fileName, "fasta")
         elif Line1.upper().startswith("CLUSTAL"):
-            self.read_seq(fileName, "clustal")
+            readOK=self.read_seq(fileName, "clustal")
         elif Line1.upper().startswith("#NEXUS"):
-            self.read_seq(fileName, "nexus")
+            readOK=self.read_seq(fileName, "nexus")
         elif Line1.upper().find("STOCKHOLM") > -1:
-            self.read_seq(fileName, "stockholm")
+            readOK=self.read_seq(fileName, "stockholm")
         elif Line1.upper().find("MULTIPLE_ALIGNMENT") > -1 or Line1.upper().find("PILEUP") > -1:
-            self.read_seq(fileName, "msf")
+            readOK=self.read_seq(fileName, "msf")
         elif len([int(i) for i in Line1.split() if i.isdigit()]) == 2:
-            self.read_seq(fileName, "phylip-relaxed")
+            readOK=self.read_seq(fileName, "phylip-relaxed")
         else:
-            QMessageBox.warning(self, "Application", "Cannot extract alignment from file %s" % fileName)
             QApplication.restoreOverrideCursor()
+            mb = QMessageBox(self)
+            mb.setTextFormat(Qt.RichText)
+            mb.setText("<p style='font-size: 18pt'>Alignment file error</p>"
+                "<p style='font-size: 14pt; font-weight: normal'> Sorry, I don't recognise the format of file:<br><i>{}</i></p>".format(fileName))
+            mb.setIcon(QMessageBox.Warning)
+            mb.exec()
+            file.close()
             return
-        self.seqs = np.array([list(rec) for rec in self.al], np.unicode, order="F")
+        if not readOK: # If there was an error in read_seq, the cursor has already been reset
+            file.close()
+            return
+
+        self.seqs = np.array([list(rec) for rec in self.al], str, order="F")
         self.seqnames = [rec.id for rec in self.al]
-        self.al = [] # release the memory used by the BioPython construct, not needed now.
+        self.al = []
+# release the memory used by the BioPython construct, not needed now.
 # now that I know how big an alignment I have, I redefine the space taken up by the various arrays
         self.no_seqs = self.seqs.shape[0]
         self.maxseqlen = self.seqs.shape[1]
+        mbflag=False
+        if self.no_seqs*self.maxseqlen >50000:
+            mb = QMessageBox(self)
+            mb.setAttribute(Qt.WA_DeleteOnClose)
+            mb.setTextFormat(Qt.RichText)
+            mb.setText("<p style='font-size: 18pt'>Large file warning</p>"
+                       "<p style='font-size: 14pt; font-weight: normal'> OK, that's a big alignment!<br>"
+                       "Be aware that processing the alignment and preparing images/files will take more than a few seconds \U0001F609.<br>"
+                       "Working.....</p>")
+            mb.setIcon(QMessageBox.Information)
+            mb.setStandardButtons(QMessageBox.NoButton)
+            mb.setWindowModality(Qt.NonModal)
+            mbflag=True
+            mb.show()
+            app.processEvents()
+        if system() == "Darwin":
+            BS.monofont.setPointSize(14)
+        else:
+            BS.monofont.setPointSize(12)
+        BS.monofont.setWeight(QFont.Normal)
+        self.textEdit.setFont(BS.monofont)
+        inf.seek(0)
+        self.textEdit.setPlainText(inf.readAll())
+        file.close()
         self.cols = np.full(self.seqs.shape, 0, dtype=np.int32)
-        self.cons = np.full(self.maxseqlen, ' ', dtype=np.unicode)
+        self.cons = np.full(self.maxseqlen, ' ', dtype=str)
         self.conschar = np.copy(self.cons)
         self.seqlens = np.full(self.no_seqs, self.maxseqlen, dtype=np.int32)
         self.startnums = np.full(self.no_seqs, 1, dtype=np.int64) # a newly loaded file has all startnums set to 1 by default
@@ -373,9 +421,12 @@ class MainWindow(QMainWindow):
             if self.seqlens[i] > self.consenslen:
                 self.consenslen = self.seqlens[i]
         self.setCurrentFile(fileName)
-        self.statusBar().showMessage("File loaded", 2000)
-        self.process_seqs()
         QApplication.restoreOverrideCursor()
+        self.process_seqs()
+
+        if mbflag:
+            mb.done(1)
+        self.statusBar().showMessage("File loaded", 2000)
         return # from load_file
 
     def make_consensus(self):
@@ -494,19 +545,17 @@ class MainWindow(QMainWindow):
     def process_seqs(self):
         if self.no_seqs < 2:
             return
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        app.processEvents()
         self.make_consensus()
         self.make_colours()
+        QApplication.restoreOverrideCursor()
 
     def prep_out(self, gr_out):
         settings = QSettings("Boxshade", "Boxshade")
         self.LHsnumsflag = settings.value("LHsnumsflag", type=bool)
         self.RHsnumsflag = settings.value("RHsnumsflag", type=bool)
         self.defnumsflag = settings.value("defnumsflag", type=bool)
-        if (self.LHsnumsflag or self.RHsnumsflag) and not self.defnumsflag: # wants numbers, but not the default
-            if np.amax(self.startnums) == 1:
-                QMessageBox.warning(self, "", "Problem with Settings!\nYou have asked for "
-                               "nondefault sequence numbering but have not set the start numbers for each sequence")
-                return False
 
         self.scflag = settings.value("scflag", type=bool)
         self.consflag = settings.value("consflag", type=bool)
@@ -516,6 +565,8 @@ class MainWindow(QMainWindow):
         self.interlines = settings.value("interlines", type=int)
         self.rulerflag = settings.value("rulerflag", type=bool)
 
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        app.processEvents()
         sname_just = max((self.consflag*9), max(map(len, self.seqnames)))
         nseqs = self.no_seqs
         if self.consflag:
@@ -523,7 +574,7 @@ class MainWindow(QMainWindow):
         if self.rulerflag:
             nseqs += 1
             gr_out.seqnames.append(" ".ljust(sname_just))
-        gr_out.seqs = np.full((nseqs, self.seqs.shape[1]), ' ', dtype=np.unicode)
+        gr_out.seqs = np.full((nseqs, self.seqs.shape[1]), ' ', dtype=str)
         gr_out.cols = np.full((nseqs, self.seqs.shape[1]), 0, dtype=np.int32)
         gr_out.seqlens = np.full(nseqs, 0, dtype=np.int64)
         gr_out.seqnames.extend([name.ljust(sname_just) for name in self.seqnames])
@@ -592,6 +643,7 @@ class MainWindow(QMainWindow):
                 gr_out.LHprenums[consl] = [' ' * numlen for x in gr_out.LHprenums[consl]]
                 gr_out.RHprenums[consl] = [' ' * numlen for x in gr_out.RHprenums[consl]]
         if not gr_out.graphics_init():
+            QApplication.restoreOverrideCursor()
             return False
         else:
             return True
@@ -634,6 +686,7 @@ class MainWindow(QMainWindow):
                 lcount = 0
                 gr_out.newpage()
         gr_out.exit()
+        QApplication.restoreOverrideCursor()
 
     def RTF_out(self):
         if self.no_seqs < 2:
@@ -654,18 +707,39 @@ class MainWindow(QMainWindow):
     def image_out(self):
         if self.no_seqs < 2:
             return
-        gr_out = Paintdev()
+# NB QPainter can only access co-ordinates at +/- 2^15, i.e. +/- 32768, so I limit the size of the canvas
+# Carry out a check here and abort if height would be out of range
+# Width cannot be > 32768 given a max font size of 48 and linelength of 250
+        settings = QSettings("Boxshade", "Boxshade")
+        self.outlen = settings.value("outlen", type=int)
+        self.rulerflag = settings.value("rulerflag", type=bool)
+        self.consflag = settings.value("consflag", type=bool)
+        self.interlines = settings.value("interlines", type=int)
 
-        self.view = ImageDisp(self)
-        self.view.setWindowTitle(self.strippedName(self.curFile))
-        self.view.show()
-        self.viewList.append(self.view)
+        gr_out = Paintdev(self)
+        blocks = self.maxseqlen //self.outlen +1
+        nlines = self.no_seqs+self.consflag +self.rulerflag+self.interlines
+        height = int(gr_out.top_mar + (gr_out.dev_ysize*((blocks*nlines)-self.interlines))+gr_out.top_mar+0.5)
+        if height > 32768:
+            mb = QMessageBox(self)
+            mb.setTextFormat(Qt.RichText)
+            mb.setText("<p style='font-size: 18pt'>Picture too large!</p>"
+                       "<p style='font-size: 14pt; font-weight: normal'> Sorry, this picture would be too high.<br>"
+                       "The drawing system used by pyBoxshade is limited to 32768 pixels in width or height.<br>"
+                       "Your output would have a height of {:n} pixels.</p>".format(height))
+            mb.setIcon(QMessageBox.Information)
+            mb.exec()
+            return
         if not self.prep_out(gr_out):
             return
         self.do_out(gr_out)
+        self.view = ImageDisp(self)
+        self.viewList.append(self.view)
+        self.view.setWindowTitle(self.strippedName(self.curFile))
         self.view.imageLabel.setPixmap(gr_out.canvas)
         self.view.imageLabel.resize(self.view.imageLabel.pixmap().size())
         self.view.updateActions()
+        self.view.show()
 
 
     def ASCII_out(self):
@@ -674,8 +748,12 @@ class MainWindow(QMainWindow):
         settings = QSettings("Boxshade", "Boxshade")
         scflag = settings.value("scflag", type=bool)
         if not scflag:
-            QMessageBox.warning(self, "", "Problem with Settings!\n"
-             "You have asked Text output, but have not selected a sequence that the others will be compared to.")
+            mb = QMessageBox(self)
+            mb.setTextFormat(Qt.RichText)
+            mb.setText("<p style='font-size: 18pt'>Output options error</p>"
+                "<p style='font-size: 14pt; font-weight: normal'> Text (ASCII) output requires you to select a specific sequence to which the others will be compared</p>")
+            mb.setIcon(QMessageBox.Warning)
+            mb.exec()
             return
         gr_out = ASCIIdev(self.strippedName(self.curFile))
         if not self.prep_out(gr_out):
@@ -692,7 +770,7 @@ class MainWindow(QMainWindow):
         else:
             shownName = 'Boxshade window'
 
-        self.setWindowTitle("%s[*] " % shownName)
+        self.setWindowTitle("{:s} ".format(shownName))
 
     def strippedName(self, fullFileName):
         return QFileInfo(fullFileName).fileName()
@@ -701,12 +779,13 @@ class MainWindow(QMainWindow):
 if __name__ == '__main__':
 
     import sys
-    import os
+#    import os
 #    getattr(sys, '_MEIPASS', '')
-    os.environ["QT_MAC_WANTS_LAYER"] = "1"
+#    os.environ["QT_MAC_WANTS_LAYER"] = "1"
 
     set_defaults() # this returns immediately if the Preferences file already exists
     app = QApplication(sys.argv)
+
     mainWin = MainWindow()
     mainWin.show()
     sys.exit(app.exec_())
