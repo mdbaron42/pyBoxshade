@@ -7,7 +7,8 @@ In the program output, identical and similar residues in the multiple alignment 
 The original program (BOXSHADE) simply reads in a sequence, processes it, then quits. pyBoxshade holds the sequence in memory until a new sequence is read in, or the user quits. Any number of different outputs can be done with the same sequence; the output can be viewed dynamically before a version is stored as a file.
 
 ### Input formats
-pyBoxshade supports a number of different input formats; it uses the BioPython library for reading aligment files, and can therefore read most of the formats supported by that library. Currently this includes Clustal format (.aln), FASTA format, Phylip format (interleaved or sequential), MSF, nexus and stockholm formats. The program attempts to determine the file type, so it should handle all of these transparently.
+pyBoxshade supports a number of different input formats; it uses the BioPython library for reading aligment files, and can therefore read most of the formats supported by that library. Currently this includes Clustal format (.aln), FASTA format, Phylip format (interleaved or sequential), MSF, nexus and stockholm formats. The program attempts to determine the file type, so it should handle all of these transparently.<br>
+**NB** At the moment there is a bug that crashes the program if any sequence consists entirely of gaps. The source code is fixed, but it will take me a while to package and upload binaries.
 
 ### Output formats
 pyBoxshade provides four types of output, those I thought would be of most use:
