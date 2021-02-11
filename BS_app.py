@@ -416,7 +416,7 @@ class MainWindow(QMainWindow):
 #spaces, etc. at the "far" end. May be a problem here for some strange cases
         self.consenslen = 0
         for i in range(0,self.no_seqs):
-            while self.seqs[i, self.seqlens[i] - 1] in [' ', '-', '.']:
+            while self.seqlens[i] and (self.seqs[i, self.seqlens[i] - 1] in [' ', '-', '.']):
                 self.seqlens[i] -= 1
             if self.seqlens[i] > self.consenslen:
                 self.consenslen = self.seqlens[i]
