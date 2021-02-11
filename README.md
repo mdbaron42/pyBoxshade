@@ -47,8 +47,8 @@ Sequence numbering starts from the first residue. For sequences that do not star
 
 ### Marker line 
 pyBoxshade has the ability to print a marker or ruler line over the sequence alignment. This looks like this:
-....:...10....:...20....:...30....:...40....:...50....:...60
-AAAAACCCCCAAAAACCCCCGGGGGTTTTTGGGGGTTTTTCCCCCTTTTTGGGGGAAAAA
+     `....:...10....:...20....:...30....:...40....:...50....:...60`
+     `AAAAACCCCCAAAAACCCCCGGGGGTTTTTGGGGGTTTTTCCCCCTTTTTGGGGGAAAAA`
 
 Numbers are right aligned with the residue in question.
 
