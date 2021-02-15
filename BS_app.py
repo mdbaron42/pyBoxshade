@@ -375,7 +375,7 @@ class MainWindow(QMainWindow):
             file.close()
             return
 
-        self.seqs = np.array([list(rec) for rec in self.al], str, order="F")
+        self.seqs = np.array([list(rec.upper()) for rec in self.al], str, order="F")
         self.seqnames = [rec.id for rec in self.al]
         self.al = []
 # release the memory used by the BioPython construct, not needed now.
