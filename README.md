@@ -8,8 +8,6 @@ The original program (BOXSHADE) simply reads in a sequence, processes it, then q
 
 ### Input formats
 pyBoxshade supports a number of different input formats; it uses the BioPython library for reading aligment files, and can therefore read most of the formats supported by that library. Currently this includes Clustal format (.aln), FASTA format, Phylip format (interleaved or sequential), MSF, nexus and stockholm formats. The program attempts to determine the file type, so it should handle all of these transparently.<br>
-**NB** At the moment, the binaries do not process alignments where the sequences are in lower case. The code is fixed and the binaries will be fixed soon.<br>
-**NB** At the moment there is a bug that crashes the program if any sequence consists entirely of gaps. The source code is fixed, but it will take me a while to package and upload binaries.
 
 ### Output formats
 pyBoxshade provides four types of output, those I thought would be of most use:
