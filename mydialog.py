@@ -99,6 +99,7 @@ class GeneralTab(QWidget):
         self.scflag = self.settings.value("scflag", type=bool)
         self.consflag = self.settings.value("consflag", type=bool)
         self.symbcons = self.settings.value("symbcons")
+        self.countGaps = self.settings.value("countGaps", type=bool)
         self.snameflag = self.settings.value("snameflag", type=bool)
         self.LHsnumsflag = self.settings.value("LHsnumsflag", type=bool)
         self.RHsnumsflag = self.settings.value("RHsnumsflag", type=bool)
@@ -198,7 +199,7 @@ class GeneralTab(QWidget):
         mainlayout.addLayout(seqnumslayout, 3, 0)
         mainlayout.addWidget(self.defnumsbox,4,0)
         mainlayout.setAlignment(self.defnumsbox, Qt.AlignRight)
-        mainlayout.addWidget(self.startstable, 5, 0, 4, 1)
+        mainlayout.addWidget(self.startstable, 5, 0, 5, 1)
 
 #Commence RHS of layout
         thrlayout = QHBoxLayout()
@@ -214,6 +215,11 @@ class GeneralTab(QWidget):
         thrlayout.setContentsMargins(0,0,55,0)
         mainlayout.addLayout(thrlayout,0,2)
 
+# simple checkboxes for several things
+        self.countgapsbox = QCheckBox("Gaps count towards totals")
+        if self.countGaps:
+            self.countgapsbox.setCheckState(Qt.Checked)
+
         self.simflagbox = QCheckBox("Special shading for similar residues")
         if self.simflag:
             self.simflagbox.setCheckState(Qt.Checked)
@@ -223,12 +229,14 @@ class GeneralTab(QWidget):
         if self.globalflag:
             self.grpflagbox.setCheckState(Qt.Checked)
         self.grpflagbox.stateChanged.connect(self.grpbox_clicked)
+
         self.conslinebox = QCheckBox("Print consensus line")
         self.rulerbox = QCheckBox("Print ruler line")
-        mainlayout.addWidget(self.simflagbox,1,2)
-        mainlayout.addWidget(self.grpflagbox,2,2)
-        mainlayout.addWidget(self.rulerbox,3,2)
-        mainlayout.addWidget(self.conslinebox,4,2)
+        mainlayout.addWidget(self.countgapsbox, 1, 2)
+        mainlayout.addWidget(self.simflagbox,2,2)
+        mainlayout.addWidget(self.grpflagbox,3,2)
+        mainlayout.addWidget(self.rulerbox,4,2)
+        mainlayout.addWidget(self.conslinebox,5,2)
 
         conslabel = QLabel("Symbols for consensus:")
         self.consbox = QLineEdit(self.symbcons, maxLength=3, alignment=Qt.AlignHCenter)
@@ -248,15 +256,15 @@ class GeneralTab(QWidget):
 
         self.conslinebox.stateChanged.connect(conslabel.setEnabled)
         self.conslinebox.stateChanged.connect(self.consbox.setEnabled)
-        mainlayout.addLayout(conslayout, 5, 2)
+        mainlayout.addLayout(conslayout, 6, 2)
 
         lenlabel = QLabel("Sequence characters per line:")
-        self.lenbox = makeQSP(value=self.outlen, step=1, maximum=250)
+        self.lenbox = makeQSP(value=self.outlen, step=1, maximum=500)
         self.lenbox.setMaximumSize(QSize(80, 20))
         lenlayout.addWidget(lenlabel)
         lenlayout.addWidget(self.lenbox)
         lenlayout.setContentsMargins(0, 0, 30, 0)
-        mainlayout.addLayout(lenlayout, 6, 2)
+        mainlayout.addLayout(lenlayout, 7, 2)
 
         interlabel = QLabel("Number of lines between blocks:")
         self.interbox = makeQSP(value=self.interlines, minimum=1, step=1)
@@ -264,7 +272,7 @@ class GeneralTab(QWidget):
         interlayout.addWidget(interlabel)
         interlayout.addWidget(self.interbox)
         interlayout.setContentsMargins(0,0,30,0)
-        mainlayout.addLayout(interlayout,7,2)
+        mainlayout.addLayout(interlayout,8,2)
         self.ProtRB = QRadioButton("Protein")
         DNARB = QRadioButton("DNA/RNA")
         if self.pepseqsflag:
@@ -275,7 +283,7 @@ class GeneralTab(QWidget):
         typecont.setAlignment(Qt.AlignRight)
         typecont.addWidget(self.ProtRB)
         typecont.addWidget(DNARB)
-        mainlayout.addLayout(typecont, 8, 2)
+        mainlayout.addLayout(typecont, 9, 2)
 
         self.setLayout(mainlayout)
 
@@ -310,7 +318,7 @@ class GeneralTab(QWidget):
                 if ret_code == QMessageBox.No:
                     return False
         if (self.scflag != self.scbox.isChecked() or self.pepseqsflag != self.ProtRB.isChecked()
-            or self.consflag != self.conslinebox.isChecked() or
+            or self.consflag != self.conslinebox.isChecked() or self.countGaps != self.countgapsbox.isChecked() or
             (self.conslinebox.isChecked() and self.symbcons != self.consbox.text()) or
                 (self.scbox.isChecked() and self.consensnum != 1+self.consnum.currentIndex()) or
                 (self.thrfrac != self.thrbox.value())):
@@ -322,6 +330,7 @@ class GeneralTab(QWidget):
         self.settings.setValue("LHsnumsflag", self.LHseqnumbox.isChecked())
         self.settings.setValue("RHsnumsflag", self.RHseqnumbox.isChecked())
         self.settings.setValue("defnumsflag", self.defnumsbox.isChecked())
+        self.settings.setValue("countGaps", self.countgapsbox.isChecked())
         self.settings.setValue("simflag", self.simflagbox.isChecked())
         self.settings.setValue("globalflag", self.grpflagbox.isChecked())
         self.settings.setValue("thrfrac", self.thrbox.value())

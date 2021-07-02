@@ -22,6 +22,7 @@ aaset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 lenaa = len(aaset)
 aasetlow = 'abcdefghijklmnopqrstuvwxyz'
 chars = aaset+aasetlow
+gapchars = '-.~'
 
 aa_dict = dict(zip(list(aaset), range(1,lenaa+1)))
 aalow_dict = dict(zip(list(aasetlow), range(1,len(aasetlow)+1)))
@@ -87,42 +88,69 @@ def set_defaults():# To be called the first time the program is run, if there ar
 
     settings = QSettings("Boxshade", "Boxshade")
     settings.setFallbacksEnabled(False)
-    if settings.contains("ASCIIchars"):
-        return
-    settings.setValue("simsline", 'SIMS:F YW:Y FW:W FY:I LM:L IM:M IL:R KH:K RH:H KR:A G:S T:D EN:E DQ:N EQ:P G:V M:END')
-    settings.setValue("grpsline", 'GRPS:FYW:ILVM:DE:GA:ST:NQ:RKH:END')
-    settings.setValue("DNAsimsline", 'SIMS:A GR:G AR:C TY:T CY:R AG:Y CT:END')
-    settings.setValue("DNAgrpsline", 'GRPS:AGR:CTY:END')
-
-    settings.setValue("thrfrac", 0.7)
-    settings.setValue("scflag", False)
-    settings.setValue("snameflag", True)
-    settings.setValue("RHsnumsflag", False)
-    settings.setValue("LHsnumsflag", False)
-    settings.setValue("defnumsflag", False)
-    settings.setValue("simflag", True)
-    settings.setValue("globalflag", True)
-    settings.setValue("consflag", False)
-    settings.setValue("outlen", 60)
-    settings.setValue("interlines", 1)
-    settings.setValue("symbcons", ' LU')
-    settings.setValue("consline", 1)
-    settings.setValue("rulerflag", False)
-    settings.setValue("pepseqsflag", True)
-    settings.setValue("PSfgds", [QColor(0, 0, 0), QColor(255, 255, 255), QColor(0, 0, 0), QColor(255, 255, 255)])
-    settings.setValue("PSbgds", [QColor(255, 255, 255), QColor(0, 0, 0), QColor(180, 180, 180), QColor(0, 0, 0)])
-    settings.setValue("PSFsize", 12)
-    settings.setValue("PSLCs", [False, False, False, False])
-    settings.setValue("PSlandscapeflag", False)
-    settings.setValue("ASCIIchars", ['L', '.', 'l', '*'])
-
-    settings.setValue("pos", QPoint(200, 200))
-    settings.setValue("size", QSize(400, 400))
+#    if settings.contains("ASCIIchars"):
+#        return
+    keys = settings.allKeys()
+    if not "simsline" in keys:
+        settings.setValue("simsline", 'SIMS:F YW:Y FW:W FY:I LM:L IM:M IL:R KH:K RH:H KR:A G:S T:D EN:E DQ:N EQ:P G:V M:END')
+    if not "grpsline" in keys:
+        settings.setValue("grpsline", 'GRPS:FYW:ILVM:DE:GA:ST:NQ:RKH:END')
+    if not "DNAsimsline" in keys:
+        settings.setValue("DNAsimsline", 'SIMS:A GR:G AR:C TY:T CY:R AG:Y CT:END')
+    if not "DNAgrpsline" in keys:
+        settings.setValue("DNAgrpsline", 'GRPS:AGR:CTY:END')
+    if not "thrfrac" in keys:
+        settings.setValue("thrfrac", 0.7)
+    if not "scflag" in keys:
+        settings.setValue("scflag", False)
+    if not "countGaps" in keys:
+        settings.setValue("countGaps", True)
+    if not "snameflag" in keys:
+        settings.setValue("snameflag", True)
+    if not "RHsnumsflag" in keys:
+        settings.setValue("RHsnumsflag", False)
+    if not "LHsnumsflag" in keys:
+        settings.setValue("LHsnumsflag", False)
+    if not "defnumsflag" in keys:
+        settings.setValue("defnumsflag", False)
+    if not "simflag" in keys:
+        settings.setValue("simflag", True)
+    if not "globalflag" in keys:
+        settings.setValue("globalflag", True)
+    if not "consflag" in keys:
+        settings.setValue("consflag", False)
+    if not "outlen" in keys:
+        settings.setValue("outlen", 60)
+    if not "interlines" in keys:
+        settings.setValue("interlines", 1)
+    if not "symbcons" in keys:
+        settings.setValue("symbcons", ' LU')
+    if not "consline" in keys:
+        settings.setValue("consline", 1)
+    if not "rulerflag" in keys:
+        settings.setValue("rulerflag", False)
+    if not "pepseqsflag" in keys:
+        settings.setValue("pepseqsflag", True)
+    if not "PSfgds" in keys:
+        settings.setValue("PSfgds", [QColor(0, 0, 0), QColor(255, 255, 255), QColor(0, 0, 0), QColor(255, 255, 255)])
+    if not "PSbgds" in keys:
+        settings.setValue("PSbgds", [QColor(255, 255, 255), QColor(0, 0, 0), QColor(180, 180, 180), QColor(0, 0, 0)])
+    if not "PSFsize" in keys:
+        settings.setValue("PSFsize", 12)
+    if not "PSLCs" in keys:
+        settings.setValue("PSLCs", [False, False, False, False])
+    if not "PSlandscapeflag" in keys:
+        settings.setValue("PSlandscapeflag", False)
+    if not "ASCIIchars" in keys:
+        settings.setValue("ASCIIchars", ['L', '.', 'l', '*'])
+    if not "pos" in keys:
+        settings.setValue("pos", QPoint(200, 200))
+    if not "size" in keys:
+        settings.setValue("size", QSize(400, 400))
     settings.sync()
     return
 
 
-# noinspection PyMethodMayBeStatic
 class MainWindow(QMainWindow):
 
     def __init__(self):
@@ -312,18 +340,19 @@ class MainWindow(QMainWindow):
         settings.setValue("size", self.size())
 
     def read_seq(self, fileName, seq_format):
-        try:
-            self.al = AlignIO.read(open(fileName), seq_format)
-        except ValueError:
-            QApplication.restoreOverrideCursor()
-            mb=QMessageBox(self)
-            mb.setTextFormat(Qt.RichText)
-            mb.setText("<p style='font-size: 18pt'>Alignment format error</p>"
-            "<p style='font-size: 14pt; font-weight: normal'> Unable to extract sequences from that file - possibly a problem with the formatting of the alignment file.</p>")
-            mb.setIcon(QMessageBox.Warning)
-            mb.exec()
-            return False
-        return True
+        with open (fileName, mode='r', encoding='utf-8') as f:
+            try:
+                self.al = AlignIO.read(f, seq_format)
+            except ValueError:
+                QApplication.restoreOverrideCursor()
+                mb=QMessageBox(self)
+                mb.setTextFormat(Qt.RichText)
+                mb.setText("<p style='font-size: 18pt'>Alignment format error</p>"
+                "<p style='font-size: 14pt; font-weight: normal'> Unable to extract sequences from that file - possibly a problem with the formatting of the alignment file.</p>")
+                mb.setIcon(QMessageBox.Warning)
+                mb.exec()
+                return False
+            return True
 
 
     def open(self):
@@ -346,6 +375,7 @@ class MainWindow(QMainWindow):
             return
 
         inf = QTextStream(file)
+        inf.setCodec("UTF-8")
         QApplication.setOverrideCursor(Qt.WaitCursor)
         QApplication.processEvents()
         Line1=inf.readLine()
@@ -433,6 +463,7 @@ class MainWindow(QMainWindow):
         settings = QSettings("Boxshade", "Boxshade")
         thrfrac = settings.value("thrfrac", type=float)
         scflag = settings.value("scflag", type=bool)
+        countGaps = settings.value("countGaps", type=bool)
         self.pepseqsflag = settings.value("pepseqsflag", type=bool)
         readsims() # (re)-read the sims/grps and remake the simtable and grptable, in case settings have changed
 # procedure to make a consensus which forms the basis of the shading
@@ -442,6 +473,8 @@ class MainWindow(QMainWindow):
             for i in range(0, self.consenslen):
                 x = self.seqs[:, i]
                 xx=np.char.isalpha(x)
+                if not countGaps:
+                    thr = round(thrfrac*np.sum(xx))
                 idcount = np.sum(x == x[xx,None], 0)
                 grpcount = np.sum(uf(x, x[xx,None]).astype(bool), 0)
                 self.cons[i] = ' '
@@ -485,12 +518,18 @@ class MainWindow(QMainWindow):
         scflag = settings.value("scflag", type=bool)
         consflag = settings.value("consflag", type=bool)
         symbcons = settings.value("symbcons")
+        countGaps = settings.value("countGaps", type=bool)
         thr = round(thrfrac * self.no_seqs)
         self.cols.fill(0)
+        seqcount = self.no_seqs
         for i in range(0, self.consenslen):
             idcount = 0
             simcount = 0
             aasetflag = self.cons[i] in aaset
+            if not countGaps:
+                seqcount=np.sum(np.char.isalpha(self.seqs[:, i]))
+                thr = round(thrfrac * seqcount)
+
 # count similar residues for the case of a group consensus;
 # note that in this case there cannot be any residues marked as
 # 'identical', by definition
@@ -505,8 +544,15 @@ class MainWindow(QMainWindow):
                         idcount += 1
                     elif sim(self.seqs[j,i], self.cons[i]):
                         simcount += 1
-                if (idcount == self.no_seqs) and aasetflag:
-                    self.cols[:,i] = 3 # if all sequences same colour them identical idcount+
+                if (idcount == seqcount) and aasetflag:
+                    if countGaps:
+                        self.cols[:,i] = 3 # if all sequences same colour them identical idcount+
+                    else:
+                        for j in range(0, self.no_seqs):
+                            if self.seqs[j, i] in gapchars:
+                                self.cols[j, i] = 0  # a gap, always uncoloured
+                            else:
+                                self.cols[j, i] = 3
                 elif ((idcount+simcount) >= thr) and aasetflag:
                     for j in range(0, self.no_seqs):
                         if self.seqs[j,i] == self.cons[i]:
@@ -516,7 +562,7 @@ class MainWindow(QMainWindow):
 
             if consflag: # should generate a consensus line
                         # in Python, there is no way to do this except with multiple nested if/elif/elses
-                if idcount == self.no_seqs:
+                if idcount == seqcount:
                     symbchar=symbcons[2].upper()
                     if symbchar == 'U':
                         self.conschar[i] = self.cons[i].upper()
@@ -524,6 +570,7 @@ class MainWindow(QMainWindow):
                         self.conschar[i] = self.cons[i].lower()
                     elif symbchar == "B" or symbchar == " ":
                         self.conschar[i] = " "
+                    else: self.conschar[i] =symbcons[2]
                 elif (idcount+simcount)>=thr :
                     symbchar = symbcons[1].upper()
                     if symbchar == 'U':
@@ -532,6 +579,7 @@ class MainWindow(QMainWindow):
                         self.conschar[i] = self.cons[i].lower()
                     elif symbchar == "B" or symbchar == " ":
                         self.conschar[i] = " "
+                    else: self.conschar[i] = symbcons[1]
                 else:
                     symbchar = symbcons[0].upper()
                     if symbchar == 'U':
@@ -540,6 +588,7 @@ class MainWindow(QMainWindow):
                         self.conschar[i] = self.cons[i].lower()
                     elif symbchar == "B" or symbchar == " ":
                         self.conschar[i] = " "
+                    else: self.conschar[i] = symbcons[0]
         return # end of the function make_colours
 
     def process_seqs(self):
