@@ -2,9 +2,12 @@
 Desktop application for colouring/shading sequence alignments
 
 ### Purpose
-pyBoxshade is a program for creating good-looking printouts from alignments of multiple protein or DNA sequences. The program does no alignment by itself, it takes as input a file preprocessed by a multiple alignment program or a multiple sequence editor. The program is an updated version of BOXSHADE (https://embnet.vital-it.ch/software/BOX_form.html); it has been converted from Pascal to Python/Qt, and is available for Windows or MacOS.
+pyBoxshade is a program for creating good-looking printouts from alignments of multiple protein or DNA sequences. The program does no alignment by itself, it takes as input a file already processed by a multiple alignment program or a multiple sequence editor. The program is an updated version of BOXSHADE, which I helped write, and which is no longer available on ExPasy servers (it is, as of this writing, available at http://arete.ibb.waw.pl/PL/html/boxshade.html). I have converted BOXSHADE from Pascal to Python/Qt, and it is available for Windows, Linux or MacOS.
 In the program output, identical and similar residues in the multiple alignment are represented by different colors of letters or shadings (colours of background). There are many options concerning the kind of shading to be applied, whether to include a ruler line, sequence numbering, a consensus line and so on. 
 The original program (BOXSHADE) simply reads in a sequence, processes it, then quits. pyBoxshade holds the sequence in memory until a new sequence is read in, or the user quits. Any number of different outputs can be done with the same sequence; the output can be viewed dynamically before a version is stored as a file.
+
+### Changes/upgrades
+Please contact me directly or via a bug report if you have any problems with the application, or if you wish to see additional functionality - if something seems worth doing, I am happy to consider it.
 
 ### Input formats
 pyBoxshade supports a number of different input formats; it uses the BioPython library for reading aligment files, and can therefore read most of the formats supported by that library. Currently this includes Clustal format (.aln), FASTA format, Phylip format (interleaved or sequential), MSF, nexus and stockholm formats. The program attempts to determine the file type, so it should handle all of these transparently.<br>
@@ -12,7 +15,7 @@ pyBoxshade supports a number of different input formats; it uses the BioPython l
 ### Output formats
 pyBoxshade provides four types of output, those I thought would be of most use:
 1. PS (PostScript) files for printing directly or further conversion. I have good success opening these files and converting to PDF, tiff or other formats with Preview (on Mac), IrfanView (Windows) or GIMP (either platform). 
-2. RTF (Rish Text Format) for export to various word-processing and graphics programs (seems to work in TextEdit (Mac OS), Microsoft Word or OpenOffice).
+2. RTF (Rich Text Format) for export to various word-processing and graphics programs (seems to work in TextEdit (Mac OS), Microsoft Word or OpenOffice).
 3. PNG (Portable Network Graphics). This format can first be viewed on screen, then saved as an image file. It is a pixel-based image format (similar to TIFF or JPEG), so is not suitable for enlarging or where high resolution images are required. In the latter case it is possible to make a larger image using a large font and shrink this image down to the required size.
 4. ASCII output showing either the conserved residues or the varying ones (others as '-').
 
